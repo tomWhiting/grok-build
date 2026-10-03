@@ -487,6 +487,7 @@ pub(super) async fn run_session(
             } else {
                 None
             };
+        let dispatcher_channel_tx = Some(session.session_cmd_tx.clone());
         tokio::task::spawn_local(async move {
             crate::session::mcp_dispatcher::run_dispatcher(
                 dispatcher_session_id,
@@ -495,6 +496,7 @@ pub(super) async fn run_session(
                 dispatcher_mcp_state,
                 shutdown_state,
                 restart_actions,
+                dispatcher_channel_tx,
                 dispatcher_cwd,
             )
             .await;
@@ -830,6 +832,11 @@ pub(super) async fn run_session(
                                     respond_to,
                                     completion_tx.clone(),
                                 )
+                                .await;
+                        }
+                        SessionCommand::McpChannelMessage { message } => {
+                            session
+                                .admit_mcp_channel_message(message, completion_tx.clone())
                                 .await;
                         }
                         SessionCommand::SessionMode { session_mode, responds_to } => {

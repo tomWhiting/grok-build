@@ -89,6 +89,9 @@ pub mod user_message_chunk_meta {
     pub const INTERJECTION: &str = xai_grok_shell::session::storage::INTERJECTION_META_KEY;
     /// Daemon `UserMessage.message_id`. An interjection stamps this with its injection id.
     pub const MESSAGE_ID: &str = "messageId";
+    /// Delivery record of a Claude Channel message; the chunk renders as a channel card.
+    /// See [`xai_grok_shell::session::mcp_channel::MCP_CHANNEL_META_KEY`].
+    pub const MCP_CHANNEL: &str = xai_grok_shell::session::mcp_channel::MCP_CHANNEL_META_KEY;
 }
 
 /// Extract the numeric counter from an `eventId` (`"{sessionId}-{counter}"`).

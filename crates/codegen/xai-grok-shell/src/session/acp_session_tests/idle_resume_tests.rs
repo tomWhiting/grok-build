@@ -89,6 +89,7 @@ async fn test_e2e_idle_resume_refreshes_model_metadata() {
                 running_task: None,
                 finalization_gate: Default::default(),
                 message_delivery: Default::default(),
+                channel_delivery: Default::default(),
                 pending_inputs: VecDeque::new(),
                 edit_holds: HashMap::new(),
                 pending_notifications: Vec::new(),
@@ -121,6 +122,7 @@ async fn test_e2e_idle_resume_refreshes_model_metadata() {
             });
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let actor = SessionActor {
+                session_cmd_tx: tokio::sync::mpsc::unbounded_channel().0,
                 vcs_root: None,
                 transient_retry_enabled: true,
                 transient_retries_prompt_total: std::cell::Cell::new(0),

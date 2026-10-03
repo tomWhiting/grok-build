@@ -150,6 +150,8 @@ mod mcp_init;
 mod parent_interject;
 #[path = "acp_session_impl/parent_message.rs"]
 mod parent_message;
+#[path = "acp_session_impl/channel_message.rs"]
+mod channel_message;
 use mcp_init::*;
 #[path = "acp_session_impl/hooks_plugins.rs"]
 mod hooks_plugins;
@@ -380,6 +382,8 @@ pub(crate) struct State {
     pub(crate) running_task: Option<AgentTask>,
     finalization_gate: FinalizationGate,
     pub(crate) message_delivery: parent_message::MessageDeliveryState,
+    /// Last admitted channel sequence per MCP server connection.
+    pub(crate) channel_delivery: channel_message::ChannelDeliveryState,
     pub(crate) pending_inputs: VecDeque<InputItem>,
     pub(crate) pending_notifications: Vec<PendingNotification>,
     /// Prompt ids under composer edit, stamped (and re-stamped) by `hold_edit`.
@@ -741,6 +745,8 @@ impl StreamApplySpan {
 pub(crate) struct SessionActor {
     /// Git/jj working-tree root for templated first-message prefixes, if any.
     pub(crate) vcs_root: Option<std::path::PathBuf>,
+    /// Sender for this actor's own command loop, handed to the MCP dispatcher for channel messages.
+    pub(crate) session_cmd_tx: mpsc::UnboundedSender<SessionCommand>,
     pub(crate) session_info: SessionInfo,
     /// Transient turn-retry kill switch, resolved once at spawn; flips apply to new sessions.
     pub(crate) transient_retry_enabled: bool,

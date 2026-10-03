@@ -3700,6 +3700,7 @@ async fn try_call_tool_reconnects_then_succeeds_after_retriable_transport_error(
             elicitation_tx: Arc::new(parking_lot::Mutex::new(None)),
             request_tracker: Arc::default(),
             service_id: crate::elicitation::RequestTracker::default().next_service_id(),
+            channel: None,
         };
         let transport = rmcp::transport::async_rw::AsyncRwTransport::<RoleClient, _, _>::new(
             client_read,
@@ -3822,6 +3823,7 @@ async fn watched_live_client(name: &str) -> Arc<McpClient> {
         elicitation_tx: Arc::new(parking_lot::Mutex::new(None)),
         request_tracker: Arc::default(),
         service_id: crate::elicitation::RequestTracker::default().next_service_id(),
+        channel: None,
     };
     let transport = rmcp::transport::async_rw::AsyncRwTransport::<RoleClient, _, _>::new(
         client_read,
@@ -4615,6 +4617,7 @@ async fn client_handler_routes_tools_changed() {
         elicitation_tx: Arc::new(parking_lot::Mutex::new(None)),
         request_tracker: Arc::default(),
         service_id: crate::elicitation::RequestTracker::default().next_service_id(),
+        channel: None,
     };
     handler.emit(McpClientEvent::ToolsChanged {
         server: handler.server_name.clone(),
@@ -5612,6 +5615,7 @@ async fn recording_service(
         elicitation_tx: Arc::new(parking_lot::Mutex::new(None)),
         request_tracker: Arc::default(),
         service_id: crate::elicitation::RequestTracker::default().next_service_id(),
+        channel: None,
     };
     let transport = rmcp::transport::async_rw::AsyncRwTransport::<RoleClient, _, _>::new(
         client_read,

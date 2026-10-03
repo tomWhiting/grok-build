@@ -13,7 +13,8 @@ use super::blocks::{
     AgentMessageBlock, BgTaskBlock, BtwBlock, ContextInfoBlock, EditToolCallBlock,
     ExecuteToolCallBlock, LineRange, ListDirToolCallBlock, MemoryCaptureBlock, OtherToolCallBlock,
     ReadToolCallBlock, SearchFileMatch, SearchToolCallBlock, SessionEvent, SessionEventBlock,
-    SubagentBlock, SubagentBlockKind, SystemMessageBlock, ThinkingBlock, ToolCallBlock,
+    ChannelMessageBlock, SubagentBlock, SubagentBlockKind, SystemMessageBlock, ThinkingBlock,
+    ToolCallBlock,
     UserPromptBlock, WorkflowBlock,
 };
 use super::types::{
@@ -321,6 +322,8 @@ pub enum RenderBlock {
     ContextInfo(ContextInfoBlock),
     /// Debug-only generated memory details.
     MemoryCapture(MemoryCaptureBlock),
+    /// Message from an opted-in MCP server's Claude Channel.
+    ChannelMessage(ChannelMessageBlock),
 }
 
 /// Delegate a method call to the inner block variant.
@@ -340,6 +343,7 @@ macro_rules! delegate_block {
             RenderBlock::Btw(b) => b.$method($($arg),*),
             RenderBlock::ContextInfo(b) => b.$method($($arg),*),
             RenderBlock::MemoryCapture(b) => b.$method($($arg),*),
+            RenderBlock::ChannelMessage(b) => b.$method($($arg),*),
         }
     };
 }
@@ -894,6 +898,7 @@ impl RenderBlock {
             | RenderBlock::SessionEvent(_)
             | RenderBlock::ContextInfo(_)
             | RenderBlock::MemoryCapture(_) => None,
+            RenderBlock::ChannelMessage(_) => Some(theme.running),
             RenderBlock::Btw(_) => Some(theme.accent_plan),
             RenderBlock::Stub(block) => Some(block.accent_color),
         }
@@ -1035,6 +1040,9 @@ impl RenderBlock {
             ]),
             RenderBlock::ContextInfo(b) => join_searchable([Some(b.model.clone())]),
             RenderBlock::MemoryCapture(b) => join_searchable([Some(b.searchable_text())]),
+            RenderBlock::ChannelMessage(b) => {
+                join_searchable([Some(b.server.clone()), Some(b.content.clone())])
+            }
             RenderBlock::ToolCall(tc) => tc.searchable_text(),
         }
     }

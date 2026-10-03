@@ -463,6 +463,11 @@ pub enum SessionCommand {
             xai_grok_tools::implementations::grok_build::task::coordinator::ActiveMessageAdmission,
         >,
     },
+    /// Admit an opted-in MCP server's channel message: a Steer at the running turn's next safe
+    /// point, or a queued turn when the session is idle.
+    McpChannelMessage {
+        message: xai_grok_mcp::channel::McpChannelNotification,
+    },
     SessionMode {
         session_mode: acp::SessionModeId,
         responds_to: oneshot::Sender<()>,

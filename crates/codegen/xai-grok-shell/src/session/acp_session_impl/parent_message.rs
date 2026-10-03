@@ -18,6 +18,8 @@ use xai_message_delivery_core::{
 pub(super) struct ParentMessageOrigin {
     sender_session_id: String,
     source: ActiveAgentMessageSource,
+    /// Set when the "parent" is an opted-in MCP server's channel rather than a session.
+    channel: Option<super::channel_message::McpChannelOrigin>,
 }
 
 #[derive(Clone)]
@@ -205,7 +207,11 @@ impl PendingParentAgentMessage {
             version: 0,
             owner: None,
             last_editor: None,
-            kind: "parent_agent_message".to_owned(),
+            kind: if origin.channel.is_some() {
+                "mcp_channel_message".to_owned()
+            } else {
+                "parent_agent_message".to_owned()
+            },
             text: SessionActor::queue_text_from_blocks(&prompt_blocks),
             combined_texts: None,
         };
@@ -220,7 +226,9 @@ impl PendingParentAgentMessage {
             verbatim: matches!(origin.source, ActiveAgentMessageSource::Human),
             json_schema: None,
             input_origin: InputOrigin::new(
-                if matches!(origin.source, ActiveAgentMessageSource::Human) {
+                if let Some(channel) = &origin.channel {
+                    channel.prompt_origin()
+                } else if matches!(origin.source, ActiveAgentMessageSource::Human) {
                     super::PromptOrigin::ParentHumanMessage {
                         message_id: self.message_id,
                         sender_session_id: origin.sender_session_id,
@@ -252,12 +260,14 @@ fn turn_binding(task: &AgentTask) -> TurnBinding<String, TurnEpoch> {
 
 fn contains_queued_identity(state: &State, identity: &str) -> bool {
     state.pending_inputs.iter().any(|item| {
-        matches!(
-            item.input_origin.as_prompt_origin(),
-            PromptOrigin::ParentAgentMessage { message_id, .. }
-            | PromptOrigin::ParentHumanMessage { message_id, .. }
-                if message_id == identity
-        )
+        // A channel message's identity is its prompt id.
+        item.prompt_id == identity
+            || matches!(
+                item.input_origin.as_prompt_origin(),
+                PromptOrigin::ParentAgentMessage { message_id, .. }
+                | PromptOrigin::ParentHumanMessage { message_id, .. }
+                    if message_id == identity
+            )
     })
 }
 
@@ -276,6 +286,7 @@ impl SessionActor {
         self.admit_parent_agent_message_inner(
             Some(delivery),
             source,
+            None,
             message,
             requested,
             receipt_sink,
@@ -286,10 +297,11 @@ impl SessionActor {
         .await;
     }
 
-    async fn admit_parent_agent_message_inner(
+    pub(super) async fn admit_parent_agent_message_inner(
         self: &Arc<Self>,
         delivery: Option<ActiveAgentMessageDelivery>,
         message_source: ActiveAgentMessageSource,
+        channel: Option<super::channel_message::McpChannelOrigin>,
         message: ActiveAgentMessage,
         requested: ActiveAgentMessageOperation,
         receipt_sink: mpsc::Sender<crate::agent::subagent::PromptTurnReceipt>,
@@ -306,7 +318,10 @@ impl SessionActor {
         };
         self.ensure_prefix_ready().await;
 
-        let prompt_id = format!("parent-message-{}", message.message_id);
+        let prompt_id = channel.as_ref().map_or_else(
+            || format!("parent-message-{}", message.message_id),
+            super::channel_message::McpChannelOrigin::prompt_id,
+        );
         let (turn_result_tx, turn_result_rx) = oneshot::channel();
         let admitted_at = std::time::Instant::now();
         let mut state = self.state.lock().await;
@@ -354,6 +369,7 @@ impl SessionActor {
         let origin = ParentMessageOrigin {
             sender_session_id: message.sender_session_id,
             source: message_source,
+            channel,
         };
         let commit = || match effective {
             ActiveAgentMessageOperation::Queue => {
@@ -447,11 +463,15 @@ impl SessionActor {
                 let ordered: Vec<&_> =
                     super::parent_interject::order_for_delivery(messages).collect();
                 for message in &ordered {
+                    let mut chunk_meta = user_chunk_meta.clone();
+                    if let Some(channel) = &message.source().channel {
+                        channel.stamp_chunk_meta(chunk_meta.get_or_insert_with(Default::default));
+                    }
                     let update = acp::SessionUpdate::UserMessageChunk(
                         acp::ContentChunk::new(acp::ContentBlock::Text(acp::TextContent::new(
                             message.content().text.to_string(),
                         )))
-                        .meta(user_chunk_meta.clone()),
+                        .meta(chunk_meta),
                     );
                     self.notifications
                         .persistence_tx
@@ -572,6 +592,7 @@ impl SessionActor {
         self.admit_parent_agent_message_inner(
             None,
             source,
+            None,
             message,
             operation,
             receipt_sink,

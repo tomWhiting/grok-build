@@ -48,6 +48,7 @@ async fn create_test_actor(
         running_task: None,
         finalization_gate: Default::default(),
         message_delivery: Default::default(),
+        channel_delivery: Default::default(),
         pending_inputs: VecDeque::new(),
         edit_holds: HashMap::new(),
         pending_notifications: Vec::new(),
@@ -75,6 +76,7 @@ async fn create_test_actor(
     );
     chat_state_handle.record_token_usage(total_tokens);
     SessionActor {
+        session_cmd_tx: tokio::sync::mpsc::unbounded_channel().0,
         vcs_root: None,
         transient_retry_enabled: true,
         transient_retries_prompt_total: std::cell::Cell::new(0),

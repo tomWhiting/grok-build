@@ -402,6 +402,43 @@ See the [MCP Server Registry](https://github.com/modelcontextprotocol/servers) f
 
 ---
 
+## Channels
+
+A server can push messages into the session instead of waiting to be called. Grok admits such a
+message when the server is configured with `channel = "wake"` and declared the experimental
+capability `claude/channel` in its `initialize` result. The server then sends
+`notifications/claude/channel` with a string `content` and an optional `meta` object whose values
+are strings:
+
+```toml
+[mcp_servers.cambium]
+command = "cambium-mcp"
+args = ["--seat", "${SEAT}"]        # ${VAR} expands from the environment at launch
+channel = "wake"                    # "off" (the default) ignores the notification; "steer" is the same as "wake"
+```
+
+What happens to an admitted message:
+
+- **Idle session:** it starts a turn, like a queued prompt.
+- **Running turn:** it is delivered at the turn's next safe point, where a parent's steer would go.
+  It never cancels running work.
+- **Review, compaction, or a turn that ends first:** it is held and queued for the next turn.
+- The model sees it as an `<mcp_channel_message>` envelope naming the server, the connection and
+  sequence number, how many earlier messages on that connection never arrived, the content and the
+  metadata. It is marked as an external notification, not operator input, and slash commands in it
+  are inert.
+- The scrollback shows a channel card with the server name and the message; expand it for the
+  delivery record and the metadata.
+
+Bounds: one notification holds at most 32 KB of content plus metadata, the rendered envelope at
+most 8 KB, and at most 64 channel turns wait in the queue. Every notification carrying the channel
+method consumes a sequence number, admitted or not, so a gap is visible to the model as
+`undelivered_before`. A reconnect starts a new connection and a new sequence.
+
+See [CHANNELS.md](../../../../../CHANNELS.md) at the repository root for the protocol details.
+
+---
+
 ## Subagents and MCP
 
 When the same server name appears in both `config.toml` / `.mcp.json` and the active agent’s `mcpServers` frontmatter, **agent.md wins** (including HTTP headers). The overlay is re-applied on config hot-reload, plugin reload, and agent switch so a disk rematerialize cannot restore the toml headers. Switching agents replaces the overlay with the new seat only: servers the new agent omits are dropped, and an agent with no `mcpServers` clears the prior overlay.

@@ -49,6 +49,7 @@ pub(in crate::session::acp_session) fn delivery_message(
         ParentMessageOrigin {
             sender_session_id: message.sender_session_id,
             source: ActiveAgentMessageSource::Agent,
+            channel: None,
         },
         PendingParentAgentMessage {
             prompt_id: format!("parent-message-{id}"),

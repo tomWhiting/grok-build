@@ -3011,6 +3011,11 @@ pub enum McpClientEvent {
         server: McpServerName,
         elicitation_id: String,
     },
+    /// Server pushed `notifications/claude/channel` and this client admits the channel.
+    ChannelMessage {
+        server: McpServerName,
+        message: crate::channel::McpChannelNotification,
+    },
     /// Client transitioned to [`ClientState::Ready`]; dispatcher uses this to surface "ready" status without polling.
     /// Emitted from `ensure_initialized`; the dispatcher maps it to `reason=initialized`.
     /// `reason=restart_succeeded` is reserved for the restart path.
@@ -3040,6 +3045,7 @@ pub enum McpClientEventKind {
     ToolsChanged,
     ResourcesChanged,
     ElicitationComplete,
+    ChannelMessage,
     Ready,
     ConfigAdded,
     ConfigRemoved,
@@ -3056,6 +3062,7 @@ impl McpClientEvent {
             | Self::ToolsChanged { server }
             | Self::ResourcesChanged { server }
             | Self::ElicitationComplete { server, .. }
+            | Self::ChannelMessage { server, .. }
             | Self::Ready { server }
             | Self::ConfigAdded { server }
             | Self::ConfigRemoved { server } => Some(server.as_str()),
@@ -3145,6 +3152,9 @@ pub struct McpClient {
     tool_timeouts: HashMap<ToolName, u64>,
     /// See [`McpServerMetaConfig::expose_image_base64`].
     expose_image_base64: bool,
+    /// `[mcp_servers.<name>] channel`; when it admits, each handshake gets a fresh
+    /// [`crate::channel::ChannelIngress`] so a reconnect starts a new sequence.
+    channel_policy: Option<xai_grok_config::McpChannelPolicy>,
     /// Shared `AuthorizationManager` for OAuth-enabled servers.
     /// `AuthClient` inside the transport holds a clone of this Arc so token updates are visible to both the transport and the re-auth path.
     auth_manager: Option<Arc<tokio::sync::Mutex<rmcp::transport::auth::AuthorizationManager>>>,
@@ -3272,6 +3282,7 @@ impl McpClient {
             tool_timeout_sec,
             tool_timeouts,
             expose_image_base64,
+            channel_policy: overrides.and_then(|o| o.channel),
             auth_manager,
             observed_token,
             http_config,
@@ -4136,6 +4147,10 @@ impl McpClient {
             elicitation_tx: Arc::clone(&self.elicitation_tx),
             request_tracker: Arc::clone(&self.request_tracker),
             service_id: self.request_tracker.next_service_id(),
+            channel: self
+                .channel_policy
+                .is_some_and(xai_grok_config::McpChannelPolicy::admits)
+                .then(|| Arc::new(crate::channel::ChannelIngress::new())),
         }
     }
 
@@ -5140,6 +5155,8 @@ pub struct GrokClientHandler {
     elicitation_tx: crate::elicitation::SharedElicitationTx,
     request_tracker: Arc<crate::elicitation::RequestTracker>,
     service_id: crate::elicitation::ServiceId,
+    /// Admission state for `notifications/claude/channel`; `None` when the server's `channel` policy is off.
+    channel: Option<Arc<crate::channel::ChannelIngress>>,
 }
 
 impl GrokClientHandler {
@@ -5207,8 +5224,34 @@ impl ClientHandler for GrokClientHandler {
     async fn on_custom_notification(
         &self,
         notification: rmcp::model::CustomNotification,
-        _context: NotificationContext<RoleClient>,
+        context: NotificationContext<RoleClient>,
     ) {
+        if notification.method == crate::channel::CLAUDE_CHANNEL_NOTIFICATION_METHOD {
+            let Some(ingress) = &self.channel else {
+                tracing::debug!(
+                    server = %self.server_name,
+                    "ignoring Claude Channel notification: channel is off for this server"
+                );
+                return;
+            };
+            let server_info = context.peer.peer_info();
+            match ingress.receive(
+                &self.server_name,
+                notification.params,
+                server_info.as_deref(),
+            ) {
+                Ok(message) => self.emit(McpClientEvent::ChannelMessage {
+                    server: self.server_name.clone(),
+                    message,
+                }),
+                Err(refusal) => tracing::warn!(
+                    server = %self.server_name,
+                    ?refusal,
+                    "dropped Claude Channel notification"
+                ),
+            }
+            return;
+        }
         if notification.method != "notifications/elicitation/response"
             && notification.method != "notifications/elicitation/complete"
         {

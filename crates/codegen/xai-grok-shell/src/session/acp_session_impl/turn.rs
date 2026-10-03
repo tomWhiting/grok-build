@@ -899,6 +899,11 @@ impl SessionActor {
         {
             chunk_meta.insert("hideFromScrollback".into(), serde_json::json!(true));
         }
+        if let Some(channel) = super::channel_message::McpChannelOrigin::from_prompt_origin(
+            input_origin.as_prompt_origin(),
+        ) {
+            channel.stamp_chunk_meta(&mut chunk_meta);
+        }
         let user_chunk_meta = Some(chunk_meta);
         let text = prompt_blocks.iter().fold(String::new(), |mut acc, b| {
             if let acp::ContentBlock::Text(t) = b {
@@ -1193,7 +1198,8 @@ impl SessionActor {
                     ConversationItem::subagent_completed(user_message)
                 }
                 super::super::PromptOrigin::ParentAgentMessage { .. }
-                | super::super::PromptOrigin::ParentHumanMessage { .. } => {
+                | super::super::PromptOrigin::ParentHumanMessage { .. }
+                | super::super::PromptOrigin::McpChannelMessage { .. } => {
                     ConversationItem::agent_message(user_message)
                 }
                 super::super::PromptOrigin::WorkflowCompleted { .. } => {

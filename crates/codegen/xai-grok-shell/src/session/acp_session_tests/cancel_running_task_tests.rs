@@ -86,6 +86,7 @@ async fn persist_ack_waits_for_disk_flush_before_success() {
                 tokio_util::sync::CancellationToken::new(),
             );
             let actor = Arc::new(SessionActor {
+                session_cmd_tx: tokio::sync::mpsc::unbounded_channel().0,
                 vcs_root: None,
                 transient_retry_enabled: true,
                 transient_retries_prompt_total: std::cell::Cell::new(0),
@@ -101,6 +102,7 @@ async fn persist_ack_waits_for_disk_flush_before_success() {
                     running_task: None,
                     finalization_gate: Default::default(),
                     message_delivery: Default::default(),
+                    channel_delivery: Default::default(),
                     pending_inputs: VecDeque::new(),
                     edit_holds: HashMap::new(),
                     pending_notifications: Vec::new(),
@@ -620,6 +622,7 @@ async fn first_turn_memory_injection_disabled_does_not_persist_to_chat_history()
             };
             let (event_tx, _event_rx) = tokio::sync::mpsc::unbounded_channel::<SessionEvent>();
             let actor = Arc::new(SessionActor {
+                session_cmd_tx: tokio::sync::mpsc::unbounded_channel().0,
                 vcs_root: None,
                 transient_retry_enabled: true,
                 transient_retries_prompt_total: std::cell::Cell::new(0),
@@ -635,6 +638,7 @@ async fn first_turn_memory_injection_disabled_does_not_persist_to_chat_history()
                     running_task: None,
                     finalization_gate: Default::default(),
                     message_delivery: Default::default(),
+                    channel_delivery: Default::default(),
                     pending_inputs: VecDeque::new(),
                     edit_holds: HashMap::new(),
                     pending_notifications: Vec::new(),
@@ -934,6 +938,7 @@ async fn cancel_running_task_teardown_clears_running_and_pending_work() {
                 running_task: None,
                 finalization_gate: Default::default(),
                 message_delivery: Default::default(),
+                channel_delivery: Default::default(),
                 pending_inputs: VecDeque::new(),
                 edit_holds: HashMap::new(),
                 pending_notifications: Vec::new(),
@@ -956,6 +961,7 @@ async fn cancel_running_task_teardown_clears_running_and_pending_work() {
                 )
                 .await;
             let actor = SessionActor {
+                session_cmd_tx: tokio::sync::mpsc::unbounded_channel().0,
                 vcs_root: None,
                 transient_retry_enabled: true,
                 transient_retries_prompt_total: std::cell::Cell::new(0),
@@ -2491,6 +2497,7 @@ async fn cancel_propagates_to_sampler_handle_so_no_further_emission() {
                 running_task: None,
                 finalization_gate: Default::default(),
                 message_delivery: Default::default(),
+                channel_delivery: Default::default(),
                 pending_inputs: VecDeque::new(),
                 edit_holds: HashMap::new(),
                 pending_notifications: Vec::new(),
@@ -2513,6 +2520,7 @@ async fn cancel_propagates_to_sampler_handle_so_no_further_emission() {
                 )
                 .await;
             let actor = SessionActor {
+                session_cmd_tx: tokio::sync::mpsc::unbounded_channel().0,
                 vcs_root: None,
                 transient_retry_enabled: true,
                 transient_retries_prompt_total: std::cell::Cell::new(0),

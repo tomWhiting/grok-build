@@ -7,6 +7,7 @@ pub(crate) mod compaction_config;
 pub(crate) mod doom_loop_telemetry;
 pub(crate) mod fork_status;
 pub mod handle;
+pub mod mcp_channel;
 pub(crate) mod memory_state;
 pub mod merge;
 pub(crate) mod message_delivery;
@@ -109,6 +110,15 @@ pub enum PromptOrigin {
         message_id: String,
         sender_session_id: String,
     },
+    /// `notifications/claude/channel` from an opted-in MCP server, rendered as an
+    /// `<mcp_channel_message>` envelope. Untrusted and slash-inert, like parent human text.
+    McpChannelMessage {
+        server: String,
+        connection: u64,
+        sequence: u64,
+        /// Earlier messages on the connection that never reached the session; unknown (0) on resume.
+        undelivered_before: u64,
+    },
     WorkflowCompleted {
         completion_id: String,
     },
@@ -146,6 +156,16 @@ impl PromptOrigin {
             Self::ParentHumanMessage {
                 message_id: parent_message_id.to_string(),
                 sender_session_id: String::new(),
+            }
+        } else if let Some(rest) = prompt_id.strip_prefix("mcp-channel-") {
+            let mut parts = rest.splitn(3, '-');
+            let connection = parts.next().and_then(|part| part.parse().ok()).unwrap_or(0);
+            let sequence = parts.next().and_then(|part| part.parse().ok()).unwrap_or(0);
+            Self::McpChannelMessage {
+                server: parts.next().unwrap_or_default().to_string(),
+                connection,
+                sequence,
+                undelivered_before: 0,
             }
         } else if let Some(completion_id) = prompt_id.strip_prefix("workflow-completed-") {
             Self::WorkflowCompleted {
@@ -185,7 +205,7 @@ impl PromptOrigin {
                 queue: QueuePolicy::VisibleProtected,
                 shutdown: ShutdownPolicy::Drain,
             },
-            Self::ParentHumanMessage { .. } => InputPolicy {
+            Self::ParentHumanMessage { .. } | Self::McpChannelMessage { .. } => InputPolicy {
                 authority: InputAuthority::ModelAuthoredUntrusted,
                 slash: SlashAuthority::Inert,
                 turn_boundary: TurnBoundary::Conversational,
@@ -234,6 +254,7 @@ impl PromptOrigin {
                 | Self::WorkflowCompleted { .. }
                 | Self::ParentAgentMessage { .. }
                 | Self::ParentHumanMessage { .. }
+                | Self::McpChannelMessage { .. }
                 | Self::NotificationDrain
         )
     }
@@ -244,6 +265,7 @@ impl PromptOrigin {
             Self::User
             | Self::ParentAgentMessage { .. }
             | Self::ParentHumanMessage { .. }
+            | Self::McpChannelMessage { .. }
             | Self::SchedulerFired
             | Self::PlanResume => false,
             Self::TaskCompleted { .. }
@@ -262,6 +284,7 @@ impl PromptOrigin {
             Self::User
             | Self::ParentAgentMessage { .. }
             | Self::ParentHumanMessage { .. }
+            | Self::McpChannelMessage { .. }
             | Self::NotificationDrain
             | Self::GoalSummary
             | Self::GoalClassifierNudge
@@ -337,6 +360,28 @@ mod tests {
             );
             assert_eq!(origin.policy().slash, slash);
         }
+    }
+    #[test]
+    fn from_prompt_id_mcp_channel_message() {
+        let origin = PromptOrigin::from_prompt_id("mcp-channel-7-12-cam-bium");
+        assert_eq!(
+            origin,
+            PromptOrigin::McpChannelMessage {
+                server: "cam-bium".into(),
+                connection: 7,
+                sequence: 12,
+                undelivered_before: 0,
+            }
+        );
+        assert_eq!(origin.policy().slash, crate::session::SlashAuthority::Inert);
+        assert_eq!(
+            origin.policy().authority,
+            crate::session::InputAuthority::ModelAuthoredUntrusted
+        );
+        assert!(origin.is_synthetic());
+        assert!(origin.is_auto_wake());
+        assert!(!origin.hide_user_echo_from_scrollback());
+        assert_eq!(origin.completion_id(), None);
     }
     #[test]
     fn from_prompt_id_subagent_completed() {
@@ -425,6 +470,15 @@ mod tests {
                 PromptOrigin::ParentHumanMessage {
                     message_id: "h".into(),
                     sender_session_id: "root".into(),
+                },
+                QueuePolicy::VisibleProtected,
+            ),
+            (
+                PromptOrigin::McpChannelMessage {
+                    server: "cambium".into(),
+                    connection: 1,
+                    sequence: 1,
+                    undelivered_before: 0,
                 },
                 QueuePolicy::VisibleProtected,
             ),

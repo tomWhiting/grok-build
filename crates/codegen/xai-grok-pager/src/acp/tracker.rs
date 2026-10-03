@@ -1508,6 +1508,15 @@ impl AcpUpdateTracker {
                 scrollback.finish_running(entry_id);
             }
         }
+        if let Some(block) = crate::scrollback::blocks::ChannelMessageBlock::from_chunk(&chunk) {
+            let entry_id = scrollback.push_block(RenderBlock::ChannelMessage(block));
+            if let Some(ms) = meta.turn_start_ms.or(meta.agent_timestamp_ms)
+                && let Some(entry) = scrollback.get_by_id_mut(entry_id)
+            {
+                entry.created_at = Some(utc_ms_to_local(ms));
+            }
+            return true;
+        }
         if self.skip_next_user_echo
             && chunk_meta_flag(&chunk, user_message_chunk_meta::HIDE_FROM_SCROLLBACK)
         {

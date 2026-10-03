@@ -756,7 +756,7 @@ pub fn extract_last_response_type(agent: &AgentView) -> String {
             RenderBlock::Btw(_) => return "Btw".to_string(),
             RenderBlock::ContextInfo(_) => return "Context".to_string(),
             // The user's latest input marks the turn boundary; there's no agent response after it yet
-            RenderBlock::UserPrompt(_) => break,
+            RenderBlock::UserPrompt(_) | RenderBlock::ChannelMessage(_) => break,
             // Structural blocks carry no response type; keep scanning
             RenderBlock::System(_)
             | RenderBlock::SessionEvent(_)
@@ -851,6 +851,7 @@ fn block_short_text(block: &crate::scrollback::block::RenderBlock) -> Option<Str
         RenderBlock::Btw(_) => Some("(btw)".to_string()),
         RenderBlock::ContextInfo(_) => Some("(context info)".to_string()),
         RenderBlock::MemoryCapture(_) => Some("(memory capture)".to_string()),
+        RenderBlock::ChannelMessage(_) => Some("(channel message)".to_string()),
         RenderBlock::Stub(_) => None,
     }
 }

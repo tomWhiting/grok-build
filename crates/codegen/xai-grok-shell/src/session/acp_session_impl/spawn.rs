@@ -660,6 +660,7 @@ pub(crate) async fn spawn_session_actor(
         running_task: None,
         finalization_gate: Default::default(),
         message_delivery: Default::default(),
+        channel_delivery: Default::default(),
         pending_inputs: VecDeque::new(),
         edit_holds: HashMap::new(),
         pending_notifications: Vec::new(),
@@ -1801,6 +1802,7 @@ pub(crate) async fn spawn_session_actor(
     let actor_build = spawn_step!("actor_build");
     let context_window_selection = Arc::new(std::sync::atomic::AtomicU64::new(0));
     let session = Arc::new_cyclic(|weak: &std::sync::Weak<SessionActor>| SessionActor {
+        session_cmd_tx: cmd_tx.clone(),
         status_wake: Default::default(),
         session_info: session_info.clone(),
         transient_retry_enabled: !startup_hints.is_subagent

@@ -157,6 +157,7 @@ fn pending_notification_cap_keeps_newest_entries() {
         running_task: None,
         finalization_gate: Default::default(),
         message_delivery: Default::default(),
+        channel_delivery: Default::default(),
         pending_inputs: std::collections::VecDeque::new(),
         edit_holds: HashMap::new(),
         pending_notifications: Vec::new(),

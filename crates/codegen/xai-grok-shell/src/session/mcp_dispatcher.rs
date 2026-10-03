@@ -159,6 +159,8 @@ pub(crate) struct CoalescedWindow {
     /// All `TransportClosed` client identities per server seen in the window.
     pub closed: HashMap<McpServerName, HashSet<u64>>,
     pub completes: Vec<(McpServerName, String)>,
+    /// Channel messages in arrival order; never coalesced.
+    pub channel_messages: Vec<xai_grok_mcp::channel::McpChannelNotification>,
 }
 
 /// Coalesce the buffered events for one window flush.
@@ -209,6 +211,9 @@ fn insert_event(win: &mut CoalescedWindow, ev: McpClientEvent) {
         } => {
             win.completes.push((server, elicitation_id));
         }
+        McpClientEvent::ChannelMessage { message, .. } => {
+            win.channel_messages.push(message);
+        }
         ev => {
             if let McpClientEvent::TransportClosed { server, client_id } = &ev {
                 win.closed
@@ -233,6 +238,7 @@ fn kind_of(ev: &McpClientEvent) -> McpClientEventKind {
         McpClientEvent::ToolsChanged { .. } => McpClientEventKind::ToolsChanged,
         McpClientEvent::ResourcesChanged { .. } => McpClientEventKind::ResourcesChanged,
         McpClientEvent::ElicitationComplete { .. } => McpClientEventKind::ElicitationComplete,
+        McpClientEvent::ChannelMessage { .. } => McpClientEventKind::ChannelMessage,
         McpClientEvent::Ready { .. } => McpClientEventKind::Ready,
         McpClientEvent::ConfigAdded { .. } => McpClientEventKind::ConfigAdded,
         McpClientEvent::ConfigRemoved { .. } => McpClientEventKind::ConfigRemoved,
@@ -278,6 +284,9 @@ pub(crate) fn build_payload(
         ),
         (McpClientEventKind::ElicitationComplete, _) => {
             unreachable!("ElicitationComplete is diverted into win.completes by insert_event")
+        }
+        (McpClientEventKind::ChannelMessage, _) => {
+            unreachable!("ChannelMessage is diverted into win.channel_messages by insert_event")
         }
         (McpClientEventKind::ResourcesChanged, _) => (
             McpServerStatus::Ready,
@@ -352,6 +361,35 @@ pub(crate) fn flush_window(
         };
         gateway
             .forward_fire_and_forget(acp::ExtNotification::new(SERVER_STATUS_METHOD, raw.into()));
+    }
+}
+
+/// Channel messages reach the session in arrival order, outside the status coalescing, as a
+/// [`SessionCommand::McpChannelMessage`] each.
+fn forward_channel_messages(
+    session_id: &str,
+    messages: Vec<xai_grok_mcp::channel::McpChannelNotification>,
+    channel_tx: Option<&tokio::sync::mpsc::UnboundedSender<crate::session::commands::SessionCommand>>,
+) {
+    for message in messages {
+        let Some(tx) = channel_tx else {
+            tracing::warn!(
+                session_id = %session_id,
+                server = %message.server_name,
+                sequence = message.sequence,
+                "dropped Claude Channel message: this session has no channel sink"
+            );
+            continue;
+        };
+        if tx
+            .send(crate::session::commands::SessionCommand::McpChannelMessage { message })
+            .is_err()
+        {
+            tracing::warn!(
+                session_id = %session_id,
+                "dropped Claude Channel message: the session command channel is closed"
+            );
+        }
     }
 }
 
@@ -493,6 +531,7 @@ pub(crate) async fn run_dispatcher(
     mcp_state: Arc<TokioMutex<McpState>>,
     shutdown: SharedShutdownState,
     restart_actions: Option<Rc<dyn crate::session::mcp_restart::RestartActions>>,
+    channel_tx: Option<tokio::sync::mpsc::UnboundedSender<crate::session::commands::SessionCommand>>,
     cwd: std::path::PathBuf,
 ) {
     // Cancellation source for spawned `auto_restart_stdio` tasks.
@@ -508,6 +547,8 @@ pub(crate) async fn run_dispatcher(
             break;
         };
         let completes = std::mem::take(&mut win.completes);
+        let channel_messages = std::mem::take(&mut win.channel_messages);
+        forward_channel_messages(&session_id, channel_messages, channel_tx.as_ref());
         // Completes are independent fire-and-forget notifications, so they flush here regardless of whether any status entries survive below
         flush_elicitation_completes(&session_id, completes, &gateway);
         if win.buf.is_empty() {
@@ -701,6 +742,7 @@ mod tests {
                     gateway,
                     mcp_state,
                     shutdown,
+                    None,
                     None,
                     std::path::PathBuf::from("."),
                 ));
@@ -1321,6 +1363,7 @@ mod tests {
                     mcp_state,
                     shutdown,
                     Some(restart_actions),
+                    None,
                     std::path::PathBuf::from("."),
                 ));
 
@@ -1396,6 +1439,7 @@ mod tests {
                     state_for_dispatcher,
                     Arc::clone(&shutdown),
                     Some(restart_actions),
+                    None,
                     std::path::PathBuf::from("."),
                 ));
 
