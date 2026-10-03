@@ -225,21 +225,19 @@ impl PendingParentAgentMessage {
             screen_mode: None,
             verbatim: matches!(origin.source, ActiveAgentMessageSource::Human),
             json_schema: None,
-            input_origin: InputOrigin::new(
-                if let Some(channel) = &origin.channel {
-                    channel.prompt_origin()
-                } else if matches!(origin.source, ActiveAgentMessageSource::Human) {
-                    super::PromptOrigin::ParentHumanMessage {
-                        message_id: self.message_id,
-                        sender_session_id: origin.sender_session_id,
-                    }
-                } else {
-                    super::PromptOrigin::ParentAgentMessage {
-                        message_id: self.message_id,
-                        sender_session_id: origin.sender_session_id,
-                    }
-                },
-            ),
+            input_origin: InputOrigin::new(if let Some(channel) = &origin.channel {
+                channel.prompt_origin()
+            } else if matches!(origin.source, ActiveAgentMessageSource::Human) {
+                super::PromptOrigin::ParentHumanMessage {
+                    message_id: self.message_id,
+                    sender_session_id: origin.sender_session_id,
+                }
+            } else {
+                super::PromptOrigin::ParentAgentMessage {
+                    message_id: self.message_id,
+                    sender_session_id: origin.sender_session_id,
+                }
+            }),
             task_wake_fallback: None,
             tool_overrides_update: None,
             respond_to,

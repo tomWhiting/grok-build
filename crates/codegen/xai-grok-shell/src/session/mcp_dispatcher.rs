@@ -369,7 +369,9 @@ pub(crate) fn flush_window(
 fn forward_channel_messages(
     session_id: &str,
     messages: Vec<xai_grok_mcp::channel::McpChannelNotification>,
-    channel_tx: Option<&tokio::sync::mpsc::UnboundedSender<crate::session::commands::SessionCommand>>,
+    channel_tx: Option<
+        &tokio::sync::mpsc::UnboundedSender<crate::session::commands::SessionCommand>,
+    >,
 ) {
     for message in messages {
         let Some(tx) = channel_tx else {
@@ -531,7 +533,9 @@ pub(crate) async fn run_dispatcher(
     mcp_state: Arc<TokioMutex<McpState>>,
     shutdown: SharedShutdownState,
     restart_actions: Option<Rc<dyn crate::session::mcp_restart::RestartActions>>,
-    channel_tx: Option<tokio::sync::mpsc::UnboundedSender<crate::session::commands::SessionCommand>>,
+    channel_tx: Option<
+        tokio::sync::mpsc::UnboundedSender<crate::session::commands::SessionCommand>,
+    >,
     cwd: std::path::PathBuf,
 ) {
     // Cancellation source for spawned `auto_restart_stdio` tasks.

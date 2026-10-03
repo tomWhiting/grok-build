@@ -16,7 +16,10 @@ fn notification(content: &str, meta: &[(&str, &str)]) -> McpChannelNotification 
 #[test]
 fn render_round_trips_through_parse_and_names_mirrored_meta() {
     let envelope = McpChannelEnvelope::new(
-        notification("ship <it> & go", &[("from", "waffles"), ("text", "ship <it> & go")]),
+        notification(
+            "ship <it> & go",
+            &[("from", "waffles"), ("text", "ship <it> & go")],
+        ),
         2,
     );
     assert_eq!(

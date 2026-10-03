@@ -5,10 +5,9 @@ use serde::{Deserialize, Serialize};
 
 pub use xai_grok_config::{
     KNOWN_MCP_SERVER_FIELDS, McpChannelPolicy, McpConfig, McpJsonOAuthBlock, McpPreferenceSource,
-    McpPreferencesFile,
-    McpServerConfig, McpServerConfigProblem, McpServerPreferences, McpServerProblemSeverity,
-    McpServerTransportConfig, McpSetupConfig, McpSetupDerivedValue, McpSetupField,
-    McpSetupFieldType, McpSetupOption, McpSetupResolution,
+    McpPreferencesFile, McpServerConfig, McpServerConfigProblem, McpServerPreferences,
+    McpServerProblemSeverity, McpServerTransportConfig, McpSetupConfig, McpSetupDerivedValue,
+    McpSetupField, McpSetupFieldType, McpSetupOption, McpSetupResolution,
 };
 
 /// Configuration for relay session sharing, set in config.toml under the `[relay]` section.

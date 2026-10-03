@@ -10,12 +10,11 @@ use xai_grok_pager_diff::DiffHunk;
 
 use super::blocks::mermaid_content::DiagramAffordance;
 use super::blocks::{
-    AgentMessageBlock, BgTaskBlock, BtwBlock, ContextInfoBlock, EditToolCallBlock,
-    ExecuteToolCallBlock, LineRange, ListDirToolCallBlock, MemoryCaptureBlock, OtherToolCallBlock,
-    ReadToolCallBlock, SearchFileMatch, SearchToolCallBlock, SessionEvent, SessionEventBlock,
-    ChannelMessageBlock, SubagentBlock, SubagentBlockKind, SystemMessageBlock, ThinkingBlock,
-    ToolCallBlock,
-    UserPromptBlock, WorkflowBlock,
+    AgentMessageBlock, BgTaskBlock, BtwBlock, ChannelMessageBlock, ContextInfoBlock,
+    EditToolCallBlock, ExecuteToolCallBlock, LineRange, ListDirToolCallBlock, MemoryCaptureBlock,
+    OtherToolCallBlock, ReadToolCallBlock, SearchFileMatch, SearchToolCallBlock, SessionEvent,
+    SessionEventBlock, SubagentBlock, SubagentBlockKind, SystemMessageBlock, ThinkingBlock,
+    ToolCallBlock, UserPromptBlock, WorkflowBlock,
 };
 use super::types::{
     AccentStyle, BlockBackground, BlockContext, BlockOutput, DisplayMode, RenderedBlockOutput,

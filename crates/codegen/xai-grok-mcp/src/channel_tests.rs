@@ -50,7 +50,11 @@ fn refusals_still_consume_a_sequence_number() {
         Err(ChannelRefusal::Malformed)
     );
     assert_eq!(
-        ingress.receive("s", Some(json!({ "content": "x", "meta": { "k": 1 } })), Some(&info)),
+        ingress.receive(
+            "s",
+            Some(json!({ "content": "x", "meta": { "k": 1 } })),
+            Some(&info)
+        ),
         Err(ChannelRefusal::Malformed)
     );
     let admitted = ingress

@@ -11,7 +11,10 @@ fn chunk(text: &str, meta: Option<serde_json::Value>) -> acp::ContentChunk {
 #[test]
 fn plain_user_chunks_are_not_channel_messages() {
     assert_eq!(
-        ChannelMessageBlock::from_chunk(&chunk("hello", Some(serde_json::json!({"promptIndex": 1})))),
+        ChannelMessageBlock::from_chunk(&chunk(
+            "hello",
+            Some(serde_json::json!({"promptIndex": 1}))
+        )),
         None
     );
     assert_eq!(ChannelMessageBlock::from_chunk(&chunk("hello", None)), None);
@@ -36,5 +39,8 @@ fn channel_chunks_show_the_message_as_sent() {
     );
     // Text that is not an envelope is shown as it is rather than dropped.
     let fallback = ChannelMessageBlock::from_chunk(&chunk("raw text", Some(record))).unwrap();
-    assert_eq!((fallback.content.as_str(), fallback.meta.len()), ("raw text", 0));
+    assert_eq!(
+        (fallback.content.as_str(), fallback.meta.len()),
+        ("raw text", 0)
+    );
 }

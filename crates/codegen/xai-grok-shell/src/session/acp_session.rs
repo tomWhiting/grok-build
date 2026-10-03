@@ -142,6 +142,8 @@ mod prompt_queue;
 pub(super) use prompt_queue::QueueInputRequest;
 #[cfg(test)]
 use tool_calls::BridgeToolSuccess;
+#[path = "acp_session_impl/channel_message.rs"]
+mod channel_message;
 #[path = "acp_session_impl/mcp.rs"]
 mod mcp;
 #[path = "acp_session_impl/mcp_init.rs"]
@@ -150,8 +152,6 @@ mod mcp_init;
 mod parent_interject;
 #[path = "acp_session_impl/parent_message.rs"]
 mod parent_message;
-#[path = "acp_session_impl/channel_message.rs"]
-mod channel_message;
 use mcp_init::*;
 #[path = "acp_session_impl/hooks_plugins.rs"]
 mod hooks_plugins;
