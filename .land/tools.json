@@ -1,0 +1,13 @@
+{
+  "schema": "land-tools/1",
+  "install_root": "target/land-tools",
+  "tools": [
+    {
+      "package": "dotslash",
+      "version": "0.5.7",
+      "source_sha256": "981dcd6a72ea3aa94e09589be223e179d65827d9e3722968c81bf5f5e4609ddb",
+      "binary": "dotslash",
+      "version_prefix": "DotSlash 0.5.7"
+    }
+  ]
+}
