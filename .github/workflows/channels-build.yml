@@ -1,0 +1,54 @@
+# Fork-only: builds the Claude Channels preview of the Grok CLI for Apple Silicon
+# and runs the tests of the crates the channels change touches. Compiles happen
+# here or on the gate host, never on a developer Mac.
+name: channels-build
+
+on:
+  push:
+    branches: [channels]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  GROK_VERSION: 1.0.45-channels.1
+
+jobs:
+  build-macos-aarch64:
+    runs-on: macos-15
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install hermetic tool runner and protoc
+        run: brew install dotslash protobuf
+      - name: Install the pinned toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-macos-aarch64
+      - name: Build the release binary
+        run: cargo build -p xai-grok-pager-bin --release --locked
+      - name: Report the version it prints
+        run: target/release/xai-grok-pager --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: grok-channels-macos-aarch64
+          path: target/release/xai-grok-pager
+          if-no-files-found: error
+
+  test-touched-crates:
+    runs-on: macos-15
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install hermetic tool runner and protoc
+        run: brew install dotslash protobuf
+      - name: Install the pinned toolchain
+        run: rustup show
+      - uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: test-macos-aarch64
+      - name: nextest on the touched crates
+        run: cargo nextest run --locked -p xai-grok-mcp -p xai-grok-pager -p xai-grok-shell --no-fail-fast
+      - name: doc tests on the touched crates
+        run: cargo test --doc --locked -p xai-grok-mcp -p xai-grok-pager -p xai-grok-shell
