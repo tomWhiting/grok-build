@@ -104,7 +104,8 @@ pub use managed_cache::{
 pub use managed_policy_trust::ManagedPolicyTrust;
 pub use mcp_bearer_token_file::{BearerTokenPath, BearerTokenPathError};
 pub use mcp_server_config::{
-    KNOWN_MCP_SERVER_FIELDS, McpConfig, McpJsonOAuthBlock, McpOAuthConfig, McpOAuthConfigMap,
+    KNOWN_MCP_SERVER_FIELDS, McpChannelPolicy, McpConfig, McpJsonOAuthBlock, McpOAuthConfig,
+    McpOAuthConfigMap,
     McpPreferenceSource, McpPreferencesFile, McpServerConfig, McpServerConfigProblem,
     McpServerPreferences, McpServerProblemSeverity, McpServerTransportConfig, McpSetupConfig,
     McpSetupDerivedValue, McpSetupField, McpSetupFieldType, McpSetupOption, McpSetupResolution,

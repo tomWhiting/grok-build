@@ -24,6 +24,25 @@ impl McpOAuthConfig {
 
 pub type McpOAuthConfigMap = HashMap<String, McpOAuthConfig>;
 
+/// Whether a server's `notifications/claude/channel` messages are admitted into the session.
+///
+/// `wake` delivers a message at the running turn's next safe point, or starts a turn when the
+/// session is idle; it never cancels running work. `off` ignores the notification. `steer` is
+/// accepted as another spelling of `wake`.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum McpChannelPolicy {
+    Off,
+    #[serde(alias = "steer")]
+    Wake,
+}
+
+impl McpChannelPolicy {
+    pub fn admits(self) -> bool {
+        matches!(self, Self::Wake)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum McpServerTransportConfig {
@@ -81,6 +100,7 @@ pub const KNOWN_MCP_SERVER_FIELDS: &[&str] = &[
     "args",
     "bearer_token_env_var",
     "bearer_token_file",
+    "channel",
     "command",
     "cwd",
     "enabled",
@@ -217,6 +237,9 @@ pub struct McpServerConfig {
     pub tool_timeouts: Option<HashMap<String, u64>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expose_image_base64: Option<bool>,
+    /// Admission policy for `notifications/claude/channel` from this server; absent means `off`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel: Option<McpChannelPolicy>,
 }
 
 impl McpServerConfig {

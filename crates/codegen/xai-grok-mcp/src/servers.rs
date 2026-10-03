@@ -3189,6 +3189,8 @@ pub struct McpClientTimeoutOverrides {
     pub tool_timeouts: Option<HashMap<String, u64>>,
     /// See [`McpServerMetaConfig::expose_image_base64`].
     pub expose_image_base64: Option<bool>,
+    /// `[mcp_servers.<name>] channel`; `None` means `off`.
+    pub channel: Option<xai_grok_config::McpChannelPolicy>,
 }
 
 impl McpClient {

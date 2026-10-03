@@ -39,6 +39,7 @@ fn user_config_writers_write_through_a_symlink() {
         tool_timeout_sec: None,
         tool_timeouts: None,
         expose_image_base64: None,
+        channel: None,
     };
 
     tokio::runtime::Builder::new_current_thread()

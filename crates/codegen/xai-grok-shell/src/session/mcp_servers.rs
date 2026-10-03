@@ -36,6 +36,7 @@ fn resolve_overrides(
         tool_timeout_sec: config.as_ref().and_then(|c| c.tool_timeout_sec),
         tool_timeouts: config.as_ref().and_then(|c| c.tool_timeouts.clone()),
         expose_image_base64: config.as_ref().and_then(|c| c.expose_image_base64),
+        channel: config.as_ref().and_then(|c| c.channel),
     })
 }
 

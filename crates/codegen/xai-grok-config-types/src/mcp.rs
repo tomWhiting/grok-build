@@ -4,7 +4,8 @@
 use serde::{Deserialize, Serialize};
 
 pub use xai_grok_config::{
-    KNOWN_MCP_SERVER_FIELDS, McpConfig, McpJsonOAuthBlock, McpPreferenceSource, McpPreferencesFile,
+    KNOWN_MCP_SERVER_FIELDS, McpChannelPolicy, McpConfig, McpJsonOAuthBlock, McpPreferenceSource,
+    McpPreferencesFile,
     McpServerConfig, McpServerConfigProblem, McpServerPreferences, McpServerProblemSeverity,
     McpServerTransportConfig, McpSetupConfig, McpSetupDerivedValue, McpSetupField,
     McpSetupFieldType, McpSetupOption, McpSetupResolution,
