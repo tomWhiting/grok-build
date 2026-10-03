@@ -1,5 +1,13 @@
 # Claude Channels for Grok
 
+Development preview `1.0.45-channels.1`, built on this Mac and installed on 3 October 2026 at 12:37
+Melbourne time from `channels` at `b54a41e0` (release build, 25 minutes, no warnings). It is the
+`grok` and `agent` launchers under `~/.grok/bin`, pointing at
+`~/.grok/downloads/grok-1.0.45-channels.1-macos-aarch64`; stock `1.0.46` stays beside it in
+`~/.grok/downloads` for rollback (repoint the two symlinks). `cli.auto_update = false` is set in
+`~/.grok/config.toml`, because the updater would otherwise replace the preview with a stock
+release that cannot deliver channel messages.
+
 An opted-in MCP server can wake an idle Grok session or steer a running one by pushing a
 notification. This document is the contract between such a server and Grok.
 
